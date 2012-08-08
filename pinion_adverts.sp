@@ -2,7 +2,7 @@
 Name: Pinion Adverts
 Author: LumiStance / Pinion
 Contributors: Azelphur
-Date: 2012 - 20/02
+Date: 2012 - 8/5
 
 Description:
 	Causes client to access a webpage when player has chosen a team.  Left 4 Dead will use
@@ -26,6 +26,9 @@ Configuration Variables (Change in motdpagehit.cfg):
 	sm_motdpagehit_url - The URL accessed on player event
 
 Changelog
+	1.5.3 <-> 2012 - 8/5 MonsterKiller
+		Removed javascript:pingTracker (caused browser to error)
+		Removed code for overwriting motd file (no neccesary)
 	1.5.2 <-> 2012 - 7/14 gH0sTy
 		Don't replace custom VGUI Menues
 	1.5.1 <-> 2012 - 5/24 Sam Gentle
@@ -79,7 +82,7 @@ enum
 };
 
 // Plugin definitions
-#define PLUGIN_VERSION "1.5-P"
+#define PLUGIN_VERSION "1.5.3-P"
 public Plugin:myinfo =
 {
 	name = "Pinion Adverts",
@@ -108,7 +111,6 @@ new Handle:g_ConVar_Version;
 // Configuration
 new String:g_motdfile[PLATFORM_MAX_PATH];
 new String:g_URL[PLATFORM_MAX_PATH];
-new g_motdTimeStamp = -1;
 
 // Configure Environment
 public OnPluginStart()
@@ -169,8 +171,6 @@ public OnClientDisconnect(client)
 public Event_CvarChange(Handle:convar, const String:oldValue[], const String:newValue[])
 {
 	RefreshCvarCache();
-	// Contents of motd file now invalid
-	g_motdTimeStamp = -1;
 }
 
 stock RefreshCvarCache()
@@ -184,21 +184,6 @@ stock RefreshCvarCache()
 
  	GetConVarString(g_ConVar_motdfile, g_motdfile, sizeof(g_motdfile));
 	GetConVarString(g_ConVar_contentURL, g_URL, sizeof(g_URL));
-
-	new timestamp = GetFileTime(g_motdfile, FileTime_LastChange);
-	if (g_URL[0] && (g_motdTimeStamp == -1 || g_motdTimeStamp != timestamp))
-	{
-		new Handle:fileh = OpenFile(g_motdfile, "w");
-		if (fileh == INVALID_HANDLE)
-			SetFailState("[lm]Could not open \"%s\"", g_motdfile);
-		else
-		{
-			WriteFileLine(fileh, g_URL);
-			CloseHandle(fileh);
-
-			g_motdTimeStamp = GetFileTime(g_motdfile, FileTime_LastChange);
-		}
-	}
 }
 /*
 // Player Chose Team - Cause page hit
@@ -220,7 +205,7 @@ public Action:Event_DoPageHit(Handle:timer, any:user_index)
 		
 		GetClientAuthString(client_index, auth, sizeof(auth));
 		
-		Format(url, sizeof(url), "javascript:pingTracker('%s%s')", g_BaseURL, auth);
+		Format(url, sizeof(url), "%s%s", g_BaseURL, auth);
 
 		ShowMOTDPanelEx(client_index, "", url, MOTDPANEL_TYPE_URL, MOTDPANEL_CMD_NONE, false);
 	}
@@ -278,7 +263,7 @@ public Action:OnMsgVGUIMenu(UserMsg:msg_id, Handle:bf, const players[], playersN
 		
 		KvSetString(kv, buffer, buffer2);
 	}
-	
+
 	new Handle:pack;
 	g_Timers[players[0]] = CreateDataTimer(0.1, LoadPage, pack, TIMER_FLAG_NO_MAPCHANGE);
 	WritePackCell(pack, GetClientUserId(players[0]));
@@ -291,7 +276,7 @@ public Action:OnMsgVGUIMenu(UserMsg:msg_id, Handle:bf, const players[], playersN
 
 public Action:PageClosed(client, const String:command[], argc)
 {
-	g_FreeNextVGUI = true;	
+	g_FreeNextVGUI = true;
 
 	//keeping this in userid form incase we still need to hook events in the future for some games
 	new userid = GetClientUserId(client); 
